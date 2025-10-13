@@ -1,0 +1,16 @@
+{% extends "base.html" %}
+
+{% block content %}
+    <h2 class="mb-4">Edit Product</h2>
+    <form method="POST" action="/edit/{{ item_id }}">
+        <div class="mb-3">
+            <label for="product_name" class="form-label">Product Name:</label>
+            <input type="text" class="form-control" id="product_name" name="product_name" value="{{ item[0] }}" required>
+        </div>
+        <div class="mb-3">
+            <label for="price" class="form-label">Price:</label>
+            <input type="number" step="0.01" class="form-control" id="price" name="price" value="{{ item[1] }}" required>
+        </div>
+        <button type="submit" class="btn btn-success">Update Product</button>
+    </form>
+{% endblock %}
