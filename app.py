@@ -114,12 +114,19 @@ def get_items():
         flash("Please log in to view products.", "warning")
         return redirect("/login")
 
+    category = request.args.get("category")
+
     conn = sqlite3.connect("marketplace.db")
     cursor = conn.cursor()
-    cursor.execute("SELECT id, product_name, price, category, image_url FROM products")
+
+    if category:
+        cursor.execute("SELECT id, product_name, price, category, image_url FROM products WHERE category = ?", (category,))
+    else:
+        cursor.execute("SELECT id, product_name, price, category, image_url FROM products")
+
     items = cursor.fetchall()
     conn.close()
-    return render_template("items.html", items=items)
+    return render_template("items.html", items=items, selected_category=category)
 
 @app.route("/delete/<int:item_id>", methods=["POST"])
 def delete_item(item_id):

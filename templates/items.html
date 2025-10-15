@@ -6,6 +6,17 @@
   {% endif %}
   <h3 class="mb-4">Available Products</h3>
 
+  <!-- Category Filter -->
+  <form method="get" action="/items" class="mb-4">
+    <label for="category" class="form-label">Filter by Category:</label>
+    <select name="category" id="category" class="form-select" onchange="this.form.submit()">
+      <option value="">All</option>
+      <option value="Stationery" {% if selected_category == 'Stationery' %}selected{% endif %}>Stationery</option>
+      <option value="Electronics" {% if selected_category == 'Electronics' %}selected{% endif %}>Electronics</option>
+      <option value="Clothing" {% if selected_category == 'Clothing' %}selected{% endif %}>Clothing</option>
+    </select>
+  </form>
+
   <a href="/add" class="btn btn-primary mb-4">Upload New Product</a>
 
   {% if items %}
