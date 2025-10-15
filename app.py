@@ -13,6 +13,10 @@ db.init_app(app)
 def home():
     return "Welcome to YU Marketplace!"
 
+@app.route("/")
+def home():
+    return render_template("home.html")
+
 @app.route("/users")
 def get_users():
     users = User.query.all()
