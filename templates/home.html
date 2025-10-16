@@ -3,7 +3,16 @@
 {% block content %}
   <h1 class="mb-4">Welcome to YU Marketplace!</h1>
 
-  <p><a href="/register" class="btn btn-outline-primary">Register</a></p>
-  <p><a href="/login" class="btn btn-outline-success">Login</a></p>
-  <p><a href="/items" class="btn btn-outline-info">View Products</a></p>
+  {% if not session.username %}
+    <p><a href="/register" class="btn btn-outline-primary">Register</a></p>
+    <p><a href="/login" class="btn btn-outline-success">Login</a></p>
+  {% endif %}
+
+  {% if session.username %}
+    <p><a href="/items" class="btn btn-outline-info">View Products</a></p>
+    <p><a href="/add" class="btn btn-outline-warning">Upload Product</a></p>
+    <form method="POST" action="/logout">
+      <button type="submit" class="btn btn-outline-secondary">Log out</button>
+    </form>
+  {% endif %}
 {% endblock %}
