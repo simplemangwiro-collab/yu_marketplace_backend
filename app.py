@@ -120,9 +120,16 @@ def get_items():
     cursor = conn.cursor()
 
     if category:
-        cursor.execute("SELECT id, product_name, price, category, image_url FROM products WHERE category = ?", (category,))
+        cursor.execute("""
+            SELECT id, product_name, price, category, image_url, seller
+            FROM products
+            WHERE category = ?
+        """, (category,))
     else:
-        cursor.execute("SELECT id, product_name, price, category, image_url FROM products")
+        cursor.execute("""
+            SELECT id, product_name, price, category, image_url, seller
+            FROM products
+        """)
 
     items = cursor.fetchall()
     conn.close()
@@ -149,6 +156,7 @@ def add_product():
         price = request.form['price']
         category = request.form['category']
         image_url = request.form['image_url']
+        seller = session["username"]
 
         if not name or not price:
             flash("Missing product name or price", "danger")
@@ -157,8 +165,8 @@ def add_product():
         conn = sqlite3.connect("marketplace.db")
         cursor = conn.cursor()
         cursor.execute(
-            "INSERT INTO products (product_name, price, category, image_url) VALUES (?, ?, ?, ?)",
-            (name, price, category, image_url)
+            "INSERT INTO products (product_name, price, category, image_url, seller) VALUES (?, ?, ?, ?, ?)",
+            (name, price, category, image_url, seller)
         )
         conn.commit()
         conn.close()
@@ -166,6 +174,41 @@ def add_product():
         return redirect("/items")
 
     return render_template("add.html")
+
+@app.route("/message/<int:item_id>", methods=["POST"])
+def send_message(item_id):
+    if "username" not in session:
+        flash("Please log in to send messages.", "warning")
+        return redirect("/login")
+
+    content = request.form["content"]
+    sender = session["username"]
+
+    conn = sqlite3.connect("marketplace.db")
+    cursor = conn.cursor()
+
+    # Get the seller of the item
+    cursor.execute("SELECT seller FROM products WHERE id = ?", (item_id,))
+    result = cursor.fetchone()
+    if not result:
+        flash("Product not found.", "danger")
+        conn.close()
+        return redirect("/items")
+
+    receiver = result[0]
+
+    # Insert the message
+    cursor.execute("""
+        INSERT INTO messages (sender, receiver, item_id, content)
+        VALUES (?, ?, ?, ?)
+    """, (sender, receiver, item_id, content))
+
+    conn.commit()
+    conn.close()
+
+    flash("Message sent to seller!", "success")
+    return redirect("/items")
+
 
 if __name__ == "__main__":
     app.run(debug=True, port=5050)
