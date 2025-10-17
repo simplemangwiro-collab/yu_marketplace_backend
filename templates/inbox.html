@@ -1,0 +1,37 @@
+{% extends "base.html" %}
+
+{% block content %}
+  <h2 class="mb-4">Your Inbox</h2>
+
+  {% if threads %}
+    <div class="container">
+      {% for (item_id, sender, item_name), messages in threads.items() %}
+        <div class="card mb-4">
+          <div class="card-header">
+            <strong>From:</strong> {{ sender }}<br>
+            <strong>Regarding:</strong> {{ item_name }}
+          </div>
+          <div class="card-body">
+            {% for content, timestamp in messages %}
+              <p class="card-text"><strong>Message:</strong> {{ content }}</p>
+              <p class="card-text"><small class="text-muted">Sent on: {{ timestamp[:10] }}</small></p>
+              <hr>
+            {% endfor %}
+
+            <!-- Reply Form -->
+            <form method="POST" action="/message/{{ item_id }}">
+              <div class="mb-2">
+                <textarea name="content" class="form-control" placeholder="Reply to {{ sender }}..." required></textarea>
+              </div>
+              <button type="submit" class="btn btn-sm btn-primary">Send Reply</button>
+            </form>
+          </div>
+        </div>
+      {% endfor %}
+    </div>
+  {% else %}
+    <p>No messages yet.</p>
+  {% endif %}
+
+  <a href="/items" class="btn btn-secondary mt-4">Back to Products</a>
+{% endblock %}

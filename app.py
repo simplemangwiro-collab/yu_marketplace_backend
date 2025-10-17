@@ -2,6 +2,7 @@ from flask import Flask, render_template, request, redirect, session, flash, jso
 from werkzeug.security import check_password_hash
 from models import db, User
 import sqlite3
+from datetime import datetime
 
 app = Flask(__name__)
 app.secret_key = "super_secret_key_123"
@@ -84,6 +85,87 @@ def logout():
 def about():
     return "This is a student-built backend for YU Marketplace."
 
+@app.route("/items")
+def get_items():
+    if "username" not in session:
+        flash("Please log in to view products.", "warning")
+        return redirect("/login")
+
+    category = request.args.get("category")
+    search_query = request.args.get("search")
+    sort_option = request.args.get("sort")
+
+    conn = sqlite3.connect("marketplace.db")
+    cursor = conn.cursor()
+
+    base_query = """SELECT id, product_name, price, category, image_url, seller, 
+                           location, description, timestamp FROM products"""
+    filters = []
+    params = []
+
+    if category:
+        filters.append("category = ?")
+        params.append(category)
+
+    if search_query:
+        filters.append("(product_name LIKE ? OR seller LIKE ?)")
+        params.extend([f"%{search_query}%", f"%{search_query}%"])
+
+    if filters:
+        query = f"{base_query} WHERE {' AND '.join(filters)}"
+    else:
+        query = base_query
+
+    if sort_option == "newest":
+        query += " ORDER BY timestamp DESC"
+    elif sort_option == "price_asc":
+        query += " ORDER BY price ASC"
+    elif sort_option == "price_desc":
+        query += " ORDER BY price DESC"
+    elif sort_option == "category":
+        query += " ORDER BY category ASC"
+
+    cursor.execute(query, params)
+    items = cursor.fetchall()
+    conn.close()
+
+    return render_template("items.html", items=items, selected_category=category)
+
+@app.route("/add", methods=["GET", "POST"])
+def add_product():
+    if "username" not in session:
+        flash("Please log in to upload products.", "warning")
+        return redirect("/login")
+
+    if request.method == "POST":
+        name = request.form['product_name']
+        price = request.form['price']
+        category = request.form['category']
+        image_url = request.form['image_url']
+        location = request.form['location']
+        description = request.form['description']
+        seller = session["username"]
+        timestamp = datetime.now().isoformat()
+
+        if not name or not price:
+            flash("Missing product name or price", "danger")
+            return render_template("add.html")
+
+        conn = sqlite3.connect("marketplace.db")
+        cursor = conn.cursor()
+        cursor.execute(
+            """INSERT INTO products 
+               (product_name, price, category, image_url, seller, location, description, timestamp) 
+               VALUES (?, ?, ?, ?, ?, ?, ?, ?)""",
+            (name, price, category, image_url, seller, location, description, timestamp)
+        )
+        conn.commit()
+        conn.close()
+        flash("Product uploaded successfully!", "success")
+        return redirect("/items")
+
+    return render_template("add.html")
+
 @app.route("/edit/<int:item_id>", methods=["GET", "POST"])
 def edit_item(item_id):
     conn = sqlite3.connect("marketplace.db")
@@ -108,33 +190,6 @@ def edit_item(item_id):
     conn.close()
     return render_template("edit.html", item=item, item_id=item_id)
 
-@app.route("/items")
-def get_items():
-    if "username" not in session:
-        flash("Please log in to view products.", "warning")
-        return redirect("/login")
-
-    category = request.args.get("category")
-
-    conn = sqlite3.connect("marketplace.db")
-    cursor = conn.cursor()
-
-    if category:
-        cursor.execute("""
-            SELECT id, product_name, price, category, image_url, seller
-            FROM products
-            WHERE category = ?
-        """, (category,))
-    else:
-        cursor.execute("""
-            SELECT id, product_name, price, category, image_url, seller
-            FROM products
-        """)
-
-    items = cursor.fetchall()
-    conn.close()
-    return render_template("items.html", items=items, selected_category=category)
-
 @app.route("/delete/<int:item_id>", methods=["POST"])
 def delete_item(item_id):
     conn = sqlite3.connect("marketplace.db")
@@ -145,35 +200,35 @@ def delete_item(item_id):
     flash("Product deleted successfully!", "info")
     return redirect("/items")
 
-@app.route("/add", methods=["GET", "POST"])
-def add_product():
+@app.route("/inbox")
+def inbox():
     if "username" not in session:
-        flash("Please log in to upload products.", "warning")
+        flash("Please log in to view your inbox.", "warning")
         return redirect("/login")
 
-    if request.method == "POST":
-        name = request.form['product_name']
-        price = request.form['price']
-        category = request.form['category']
-        image_url = request.form['image_url']
-        seller = session["username"]
+    conn = sqlite3.connect("marketplace.db")
+    cursor = conn.cursor()
 
-        if not name or not price:
-            flash("Missing product name or price", "danger")
-            return render_template("add.html")
+    cursor.execute("""
+        SELECT messages.sender, products.product_name, messages.content, messages.timestamp, messages.item_id
+        FROM messages
+        JOIN products ON messages.item_id = products.id
+        WHERE messages.receiver = ?
+        ORDER BY messages.item_id, messages.sender, messages.timestamp ASC
+    """, (session["username"],))
 
-        conn = sqlite3.connect("marketplace.db")
-        cursor = conn.cursor()
-        cursor.execute(
-            "INSERT INTO products (product_name, price, category, image_url, seller) VALUES (?, ?, ?, ?, ?)",
-            (name, price, category, image_url, seller)
-        )
-        conn.commit()
-        conn.close()
-        flash("Product uploaded successfully!", "success")
-        return redirect("/items")
+    raw_messages = cursor.fetchall()
+    conn.close()
 
-    return render_template("add.html")
+    # Group messages by (item_id, sender)
+    threads = {}
+    for sender, item_name, content, timestamp, item_id in raw_messages:
+        key = (item_id, sender, item_name)
+        if key not in threads:
+            threads[key] = []
+        threads[key].append((content, timestamp))
+
+    return render_template("inbox.html", threads=threads)
 
 @app.route("/message/<int:item_id>", methods=["POST"])
 def send_message(item_id):
@@ -183,11 +238,11 @@ def send_message(item_id):
 
     content = request.form["content"]
     sender = session["username"]
+    timestamp = datetime.now().isoformat()
 
     conn = sqlite3.connect("marketplace.db")
     cursor = conn.cursor()
 
-    # Get the seller of the item
     cursor.execute("SELECT seller FROM products WHERE id = ?", (item_id,))
     result = cursor.fetchone()
     if not result:
@@ -197,18 +252,16 @@ def send_message(item_id):
 
     receiver = result[0]
 
-    # Insert the message
     cursor.execute("""
-        INSERT INTO messages (sender, receiver, item_id, content)
-        VALUES (?, ?, ?, ?)
-    """, (sender, receiver, item_id, content))
+        INSERT INTO messages (sender, receiver, item_id, content, timestamp)
+        VALUES (?, ?, ?, ?, ?)
+    """, (sender, receiver, item_id, content, timestamp))
 
     conn.commit()
     conn.close()
 
     flash("Message sent to seller!", "success")
     return redirect("/items")
-
 
 if __name__ == "__main__":
     app.run(debug=True, port=5050)
