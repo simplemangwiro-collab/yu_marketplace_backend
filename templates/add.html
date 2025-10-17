@@ -19,6 +19,14 @@
             <label for="image_url" class="form-label">Image URL:</label>
             <input type="text" class="form-control" id="image_url" name="image_url" placeholder="https://example.com/image.jpg">
         </div>
+        <div class="mb-3">
+            <label for="location" class="form-label">Location:</label>
+            <input type="text" class="form-control" id="location" name="location" placeholder="e.g. Harare, New Jersey" required>
+        </div>
+        <div class="mb-3">
+            <label for="description" class="form-label">Description:</label>
+            <textarea class="form-control" id="description" name="description" rows="3" placeholder="Brief details about the product..." required></textarea>
+        </div>
         <button type="submit" class="btn btn-primary">Add Product</button>
     </form>
 {% endblock %}
