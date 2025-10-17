@@ -6,6 +6,14 @@
   {% endif %}
   <h3 class="mb-4">Available Products</h3>
 
+  <!-- Search Bar -->
+  <form method="get" action="/items" class="mb-4">
+    <div class="input-group">
+      <input type="text" name="search" class="form-control" placeholder="Search by product name or seller..." value="{{ request.args.get('search', '') }}">
+      <button class="btn btn-outline-secondary" type="submit">Search</button>
+    </div>
+  </form>
+
   <!-- Category Filter -->
   <form method="get" action="/items" class="mb-4">
     <label for="category" class="form-label">Filter by Category:</label>
@@ -15,44 +23,3 @@
       <option value="Electronics" {% if selected_category == 'Electronics' %}selected{% endif %}>Electronics</option>
       <option value="Clothing" {% if selected_category == 'Clothing' %}selected{% endif %}>Clothing</option>
     </select>
-  </form>
-
-  <a href="/add" class="btn btn-primary mb-4">Upload New Product</a>
-
-  {% if items %}
-    <div class="row">
-      {% for item in items %}
-        <div class="col-md-6 col-lg-4 mb-4">
-          <div class="card h-100">
-            {% if item[4] %}
-              <img src="{{ item[4] }}" class="card-img-top" alt="Product Image" style="max-height: 200px; object-fit: cover;">
-            {% endif %}
-            <div class="card-body d-flex flex-column justify-content-between">
-              <div>
-                <h5 class="card-title">{{ item[1] }}</h5>
-                <p class="card-text">${{ item[2] }}</p>
-                {% if item[3] %}
-                  <span class="badge bg-primary">{{ item[3] }}</span>
-                {% endif %}
-              </div>
-              <div class="mt-3 d-flex justify-content-end">
-                <form method="GET" action="/edit/{{ item[0] }}" class="me-2">
-                  <button type="submit" class="btn btn-warning btn-sm">Edit</button>
-                </form>
-                <form method="POST" action="/delete/{{ item[0] }}">
-                  <button type="submit" class="btn btn-danger btn-sm">Delete</button>
-                </form>
-              </div>
-            </div>
-          </div>
-        </div>
-      {% endfor %}
-    </div>
-  {% else %}
-    <p>No products available yet.</p>
-  {% endif %}
-
-  <form method="POST" action="/logout" class="mt-4">
-    <button type="submit" class="btn btn-secondary">Log out</button>
-  </form>
-{% endblock %}
