@@ -94,6 +94,9 @@ def get_items():
     category = request.args.get("category")
     search_query = request.args.get("search")
     sort_option = request.args.get("sort")
+    page = int(request.args.get("page", 1))
+    per_page = 10
+    offset = (page - 1) * per_page
 
     conn = sqlite3.connect("marketplace.db")
     conn.row_factory = sqlite3.Row
@@ -126,11 +129,23 @@ def get_items():
     elif sort_option == "category":
         query += " ORDER BY category ASC"
 
+    query += " LIMIT ? OFFSET ?"
+    params.extend([per_page, offset])
+
     cursor.execute(query, params)
     items = cursor.fetchall()
+
+    count_query = "SELECT COUNT(*) FROM products"
+    if filters:
+        count_query += " WHERE " + " AND ".join(filters)
+    cursor.execute(count_query, params[:-2])  # exclude LIMIT/OFFSET
+    total_items = cursor.fetchone()[0]
     conn.close()
 
-    return render_template("items.html", items=items, selected_category=category)
+    total_pages = (total_items + per_page - 1) // per_page
+
+    return render_template("items.html", items=items, selected_category=category,
+                           current_page=page, total_pages=total_pages)
 
 @app.route("/item/<int:item_id>")
 def view_item(item_id):
@@ -231,25 +246,81 @@ def inbox():
     conn.row_factory = sqlite3.Row
     cursor = conn.cursor()
 
+    # Get all messages where user is sender or receiver
     cursor.execute("""
-        SELECT messages.sender, products.product_name, messages.content, messages.timestamp, messages.item_id
+        SELECT sender, receiver, products.product_name, content, timestamp, item_id
         FROM messages
         JOIN products ON messages.item_id = products.id
-        WHERE messages.receiver = ?
-        ORDER BY messages.item_id, messages.sender, messages.timestamp ASC
-    """, (session["username"],))
-
+        WHERE sender = ? OR receiver = ?
+        ORDER BY item_id, timestamp ASC
+    """, (session["username"], session["username"]))
     raw_messages = cursor.fetchall()
-    conn.close()
 
     threads = {}
-    for sender, item_name, content, timestamp, item_id in raw_messages:
-        key = (item_id, sender, item_name)
+    unread_counts = {}
+
+    for sender, receiver, item_name, content, timestamp, item_id in raw_messages:
+        # Always group by the other person (not yourself)
+        other = receiver if sender == session["username"] else sender
+        key = (item_id, other, item_name)
+
         if key not in threads:
             threads[key] = []
-        threads[key].append((content, timestamp))
+            unread_counts[key] = 0
 
-    return render_template("inbox.html", threads=threads)
+        threads[key].append((sender, content, timestamp))
+
+        # Count unread messages only if you're the receiver
+        if receiver == session["username"]:
+            cursor.execute("""
+                SELECT COUNT(*) FROM messages
+                WHERE item_id = ? AND sender = ? AND receiver = ? AND read = 0
+            """, (item_id, other, session["username"]))
+            unread_counts[key] = cursor.fetchone()[0]
+
+    # Mark all received messages as read
+    cursor.execute("""
+        UPDATE messages SET read = 1
+        WHERE receiver = ? AND read = 0
+    """, (session["username"],))
+    conn.commit()
+    conn.close()
+
+    return render_template("inbox.html", threads=threads, unread_counts=unread_counts)
+
+@app.route("/dashboard")
+def seller_dashboard():
+    if "username" not in session:
+        flash("Please log in to view your dashboard.", "warning")
+        return redirect("/login")
+
+    seller = session["username"]
+    conn = sqlite3.connect("marketplace.db")
+    conn.row_factory = sqlite3.Row
+    cursor = conn.cursor()
+
+    # Get seller's products
+    cursor.execute("""
+        SELECT id, product_name, price, category, timestamp
+        FROM products
+        WHERE seller = ?
+        ORDER BY timestamp DESC
+    """, (seller,))
+    products = cursor.fetchall()
+
+    # Get message counts per product
+    cursor.execute("""
+        SELECT item_id, COUNT(*) as message_count
+        FROM messages
+        WHERE receiver = ?
+        GROUP BY item_id
+    """, (seller,))
+    raw_counts = cursor.fetchall()
+    message_counts = {row["item_id"]: row["message_count"] for row in raw_counts}
+
+    conn.close()
+    return render_template("dashboard.html", products=products, message_counts=message_counts)
+
 
 @app.route("/message/<int:item_id>", methods=["POST"])
 def send_message(item_id):

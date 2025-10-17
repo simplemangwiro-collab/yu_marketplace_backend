@@ -5,25 +5,36 @@
 
   {% if threads %}
     <div class="container">
-      {% for (item_id, sender, item_name), messages in threads.items() %}
+      {% for (item_id, other_user, item_name), messages in threads.items() %}
         <div class="card mb-4">
-          <div class="card-header">
-            <strong>From:</strong> {{ sender }}<br>
-            <strong>Regarding:</strong> {{ item_name }}
+          <div class="card-header d-flex justify-content-between align-items-center">
+            <div>
+              <strong>Conversation with:</strong> {{ other_user }}<br>
+              <strong>Regarding:</strong> {{ item_name }}
+            </div>
+            <span class="badge bg-danger rounded-pill">
+              {{ unread_counts[(item_id, other_user, item_name)] }} unread
+            </span>
           </div>
           <div class="card-body">
-            {% for content, timestamp in messages %}
-              <p class="card-text"><strong>Message:</strong> {{ content }}</p>
-              <p class="card-text"><small class="text-muted">Sent on: {{ timestamp[:10] }}</small></p>
+            {% for sender_name, content, timestamp in messages %}
+              <p class="card-text">
+                <strong>{{ sender_name }}:</strong> {{ content }}
+              </p>
+              <p class="card-text">
+                <small class="text-muted">Sent on: {{ timestamp[:10] }}</small>
+              </p>
               <hr>
             {% endfor %}
 
             <!-- Reply Form -->
             <form method="POST" action="/message/{{ item_id }}">
               <div class="mb-2">
-                <textarea name="content" class="form-control" placeholder="Reply to {{ sender }}..." required></textarea>
+                <textarea name="content" class="form-control" placeholder="Reply to {{ other_user }}..." required></textarea>
               </div>
-              <button type="submit" class="btn btn-sm btn-primary">Send Reply</button>
+              <button type="submit" class="btn btn-sm btn-primary">
+                <i class="bi bi-send"></i> Send Reply
+              </button>
             </form>
           </div>
         </div>
