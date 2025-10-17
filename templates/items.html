@@ -10,7 +10,9 @@
   <form method="get" action="/items" class="mb-4">
     <div class="input-group">
       <input type="text" name="search" class="form-control" placeholder="Search by product name or seller..." value="{{ request.args.get('search', '') }}">
-      <button class="btn btn-outline-secondary" type="submit">Search</button>
+      <button class="btn btn-outline-secondary" type="submit">
+        <i class="bi bi-search"></i> Search
+      </button>
     </div>
   </form>
 
@@ -24,4 +26,32 @@
       <option value="Clothing" {% if selected_category == 'Clothing' %}selected{% endif %}>Clothing</option>
     </select>
   </form>
+
+  <!-- Product List -->
+  {% if items %}
+    <ul class="list-group">
+      {% for item in items %}
+        <li class="list-group-item d-flex justify-content-between align-items-center">
+          <div>
+            <strong>{{ item.name }}</strong> — {{ item.category }}<br>
+            <small>Seller: {{ item.seller }}</small>
+          </div>
+          <div>
+            <a href="/edit/{{ item.id }}" class="btn btn-sm btn-warning me-2">
+              <i class="bi bi-pencil-square"></i> Edit
+            </a>
+            <form method="POST" action="/delete/{{ item.id }}" style="display:inline;">
+              <button type="submit" class="btn btn-sm btn-danger">
+                <i class="bi bi-trash"></i> Delete
+              </button>
+            </form>
+          </div>
+        </li>
+      {% endfor %}
+    </ul>
+  {% else %}
+    <div class="alert alert-info mt-4" role="alert">
+      No products found. Try adjusting your search or filter.
+    </div>
+  {% endif %}
 {% endblock %}

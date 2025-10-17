@@ -96,6 +96,7 @@ def get_items():
     sort_option = request.args.get("sort")
 
     conn = sqlite3.connect("marketplace.db")
+    conn.row_factory = sqlite3.Row
     cursor = conn.cursor()
 
     base_query = """SELECT id, product_name, price, category, image_url, seller, 
@@ -104,17 +105,17 @@ def get_items():
     params = []
 
     if category:
-        filters.append("category = ?")
-        params.append(category)
+        filters.append("LOWER(category) = ?")
+        params.append(category.lower())
 
     if search_query:
-        filters.append("(product_name LIKE ? OR seller LIKE ?)")
-        params.extend([f"%{search_query}%", f"%{search_query}%"])
+        filters.append("(LOWER(product_name) LIKE ? OR LOWER(seller) LIKE ?)")
+        search_term = f"%{search_query.lower()}%"
+        params.extend([search_term, search_term])
 
+    query = base_query
     if filters:
-        query = f"{base_query} WHERE {' AND '.join(filters)}"
-    else:
-        query = base_query
+        query += " WHERE " + " AND ".join(filters)
 
     if sort_option == "newest":
         query += " ORDER BY timestamp DESC"
@@ -169,6 +170,7 @@ def add_product():
 @app.route("/edit/<int:item_id>", methods=["GET", "POST"])
 def edit_item(item_id):
     conn = sqlite3.connect("marketplace.db")
+    conn.row_factory = sqlite3.Row
     cursor = conn.cursor()
 
     if request.method == "POST":
@@ -207,6 +209,7 @@ def inbox():
         return redirect("/login")
 
     conn = sqlite3.connect("marketplace.db")
+    conn.row_factory = sqlite3.Row
     cursor = conn.cursor()
 
     cursor.execute("""
@@ -220,7 +223,6 @@ def inbox():
     raw_messages = cursor.fetchall()
     conn.close()
 
-    # Group messages by (item_id, sender)
     threads = {}
     for sender, item_name, content, timestamp, item_id in raw_messages:
         key = (item_id, sender, item_name)
