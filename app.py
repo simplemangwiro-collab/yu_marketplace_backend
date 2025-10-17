@@ -328,13 +328,14 @@ def send_message(item_id):
         flash("Please log in to send messages.", "warning")
         return redirect("/login")
 
-    content = request.form["content"]
+    content = request.form.get("content")
     sender = session["username"]
     timestamp = datetime.now().isoformat()
 
     conn = sqlite3.connect("marketplace.db")
     cursor = conn.cursor()
 
+    # Get the receiver (seller of the item)
     cursor.execute("SELECT seller FROM products WHERE id = ?", (item_id,))
     result = cursor.fetchone()
     if not result:
@@ -344,16 +345,17 @@ def send_message(item_id):
 
     receiver = result[0]
 
+    # Insert message with read = 0
     cursor.execute("""
-        INSERT INTO messages (sender, receiver, item_id, content, timestamp)
-        VALUES (?, ?, ?, ?, ?)
-    """, (sender, receiver, item_id, content, timestamp))
+        INSERT INTO messages (sender, receiver, item_id, content, timestamp, read)
+        VALUES (?, ?, ?, ?, ?, ?)
+    """, (sender, receiver, item_id, content, timestamp, 0))
 
     conn.commit()
     conn.close()
 
     flash("Message sent to seller!", "success")
-    return redirect("/items")
+    return redirect("/inbox")
 
 if __name__ == "__main__":
     app.run(debug=True, port=5050)
