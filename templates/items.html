@@ -33,7 +33,9 @@
       {% for item in items %}
         <li class="list-group-item d-flex justify-content-between align-items-center">
           <div>
-            <strong>{{ item['product_name'] }}</strong> — {{ item['category'] }}<br>
+            <strong>
+              <a href="/item/{{ item['id'] }}">{{ item['product_name'] }}</a>
+            </strong> — {{ item['category'] }}<br>
             <small>Seller: {{ item['seller'] }}</small>
           </div>
           <div>

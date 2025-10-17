@@ -1,0 +1,14 @@
+{% extends "base.html" %}
+
+{% block content %}
+  <h2>{{ item['product_name'] }}</h2>
+  <img src="{{ item['image_url'] }}" class="img-fluid mb-3" alt="{{ item['product_name'] }}">
+  <p><strong>Price:</strong> ${{ item['price'] }}</p>
+  <p><strong>Category:</strong> {{ item['category'] }}</p>
+  <p><strong>Seller:</strong> {{ item['seller'] }}</p>
+  <p><strong>Location:</strong> {{ item['location'] }}</p>
+  <p><strong>Description:</strong> {{ item['description'] }}</p>
+  <p><small class="text-muted">Posted on: {{ item['timestamp'] }}</small></p>
+
+  <a href="/items" class="btn btn-secondary mt-3">Back to Products</a>
+{% endblock %}

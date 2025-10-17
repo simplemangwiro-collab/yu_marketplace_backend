@@ -132,6 +132,25 @@ def get_items():
 
     return render_template("items.html", items=items, selected_category=category)
 
+@app.route("/item/<int:item_id>")
+def view_item(item_id):
+    if "username" not in session:
+        flash("Please log in to view product details.", "warning")
+        return redirect("/login")
+
+    conn = sqlite3.connect("marketplace.db")
+    conn.row_factory = sqlite3.Row
+    cursor = conn.cursor()
+    cursor.execute("SELECT * FROM products WHERE id = ?", (item_id,))
+    item = cursor.fetchone()
+    conn.close()
+
+    if not item:
+        flash("Product not found.", "danger")
+        return redirect("/items")
+
+    return render_template("item_detail.html", item=item)
+
 @app.route("/add", methods=["GET", "POST"])
 def add_product():
     if "username" not in session:
