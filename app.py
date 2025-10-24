@@ -166,11 +166,11 @@ def view_item(item_id):
         flash("Product not found.", "danger")
         return redirect("/items")
 
-    # Fetch messages where current user is sender or recipient
+    # Fetch messages where current user is sender or receiver
     cursor.execute("""
         SELECT * FROM messages
         WHERE item_id = ?
-        AND (sender = ? OR recipient = ?)
+        AND (sender = ? OR receiver = ?)
         ORDER BY timestamp ASC
     """, (item_id, session['username'], session['username']))
     messages = cursor.fetchall()
@@ -178,6 +178,8 @@ def view_item(item_id):
     conn.close()
 
     return render_template("item_detail.html", item=item, messages=messages)
+
+
 
 @app.route("/add", methods=["GET", "POST"])
 def add_product():
