@@ -275,7 +275,10 @@ def inbox():
     unread_counts = {}
 
     for sender, receiver, item_name, content, timestamp, item_id in raw_messages:
-        # Always group by the other person (not yourself)
+        # Skip broken or orphaned rows
+        if not item_id or not item_name or not sender or not receiver:
+            continue
+
         other = receiver if sender == session["username"] else sender
         key = (item_id, other, item_name)
 
@@ -285,13 +288,16 @@ def inbox():
 
         threads[key].append((sender, content, timestamp))
 
-        # Count unread messages only if you're the receiver
-        if receiver == session["username"]:
-            cursor.execute("""
-                SELECT COUNT(*) FROM messages
-                WHERE item_id = ? AND sender = ? AND receiver = ? AND read = 0
-            """, (item_id, other, session["username"]))
-            unread_counts[key] = cursor.fetchone()[0]
+        try:
+            if receiver == session["username"]:
+                cursor.execute("""
+                    SELECT COUNT(*) FROM messages
+                    WHERE item_id = ? AND sender = ? AND receiver = ? AND read = 0
+                """, (item_id, other, session["username"]))
+                unread_counts[key] = cursor.fetchone()[0]
+        except Exception as e:
+            print("Unread count error:", e)
+            unread_counts[key] = 0
 
     # Mark all received messages as read
     cursor.execute("""
@@ -302,6 +308,7 @@ def inbox():
     conn.close()
 
     return render_template("inbox.html", threads=threads, unread_counts=unread_counts)
+
 
 @app.route("/dashboard")
 def seller_dashboard():
