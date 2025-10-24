@@ -1,0 +1,40 @@
+{% extends "base.html" %}
+
+{% block content %}
+  <h2>{{ item['product_name'] }}</h2>
+  <img src="{{ item['image_url'] }}" class="img-fluid mb-3" alt="{{ item['product_name'] }}">
+  <p><strong>Price:</strong> ${{ item['price'] }}</p>
+  <p><strong>Category:</strong> {{ item['category'] }}</p>
+  <p><strong>Seller:</strong> {{ item['seller'] }}</p>
+  <p><strong>Location:</strong> {{ item['location'] }}</p>
+  <p><strong>Description:</strong> {{ item['description'] }}</p>
+  <p><small class="text-muted">Posted on: {{ item['timestamp'] }}</small></p>
+
+  <a href="/items" class="btn btn-secondary mt-3">Back to Products</a>
+
+  {% if session.username and session.username != item['seller'] %}
+    <!-- Conversation Thread -->
+    {% if messages %}
+      <div class="mt-5">
+        <h5>Conversation with {{ item['seller'] }}</h5>
+        {% for message in messages %}
+          <div class="border rounded p-2 mb-2">
+            <strong>{{ message.sender }}:</strong> {{ message.content }}<br>
+            <small class="text-muted">{{ message.timestamp }}</small>
+          </div>
+        {% endfor %}
+      </div>
+    {% endif %}
+
+    <!-- Message Form -->
+    <form method="POST" action="/message/{{ item['id'] }}" class="mt-4">
+      <div class="mb-3">
+        <label for="content" class="form-label">Message the seller:</label>
+        <textarea name="content" class="form-control" rows="3" placeholder="Type your message..." required></textarea>
+      </div>
+      <button type="submit" class="btn btn-primary">
+        <i class="bi bi-send"></i> Send Message
+      </button>
+    </form>
+  {% endif %}
+{% endblock %}
