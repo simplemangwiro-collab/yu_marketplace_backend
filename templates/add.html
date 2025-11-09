@@ -2,7 +2,7 @@
 
 {% block content %}
     <h2 class="mb-4">Add a New Product</h2>
-    <form method="POST" action="/add">
+    <form method="POST" action="/add" enctype="multipart/form-data">
         <div class="mb-3">
             <label for="product_name" class="form-label">Product Name:</label>
             <input type="text" class="form-control" id="product_name" name="product_name" required>
@@ -16,8 +16,8 @@
             <input type="text" class="form-control" id="category" name="category" placeholder="e.g. Stationery, Electronics">
         </div>
         <div class="mb-3">
-            <label for="image_url" class="form-label">Image URL:</label>
-            <input type="text" class="form-control" id="image_url" name="image_url" placeholder="https://example.com/image.jpg">
+            <label for="image" class="form-label">Upload Image:</label>
+            <input type="file" class="form-control" id="image" name="image" accept="image/*">
         </div>
         <div class="mb-3">
             <label for="location" class="form-label">Location:</label>

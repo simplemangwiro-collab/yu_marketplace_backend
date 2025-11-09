@@ -1,6 +1,8 @@
-from flask import Flask, render_template, request, redirect, session, flash, jsonify
+from flask import Flask, render_template, request, redirect, session, flash, jsonify, url_for
 from werkzeug.security import check_password_hash
-from models import db, User
+from werkzeug.utils import secure_filename
+from models import db, User, Item
+import os
 import sqlite3
 from datetime import datetime
 
@@ -9,6 +11,14 @@ app.secret_key = "super_secret_key_123"
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///marketplace.db'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 db.init_app(app)
+
+# Image upload configuration
+UPLOAD_FOLDER = 'static/uploads'
+ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif'}
+app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
+
+def allowed_file(filename):
+    return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
 
 @app.route("/")
 def home():
@@ -180,7 +190,6 @@ def view_item(item_id):
     return render_template("item_detail.html", item=item, messages=messages)
 
 
-
 @app.route("/add", methods=["GET", "POST"])
 def add_product():
     if "username" not in session:
@@ -191,11 +200,19 @@ def add_product():
         name = request.form['product_name']
         price = request.form['price']
         category = request.form['category']
-        image_url = request.form['image_url']
         location = request.form['location']
         description = request.form['description']
         seller = session["username"]
         timestamp = datetime.now().isoformat()
+
+        file = request.files.get('image')
+        image_url = None
+
+        if file and allowed_file(file.filename):
+            filename = secure_filename(file.filename)
+            file_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+            file.save(file_path)
+            image_url = url_for('static', filename='uploads/' + filename)
 
         if not name or not price:
             flash("Missing product name or price", "danger")
@@ -215,6 +232,7 @@ def add_product():
         return redirect("/items")
 
     return render_template("add.html")
+
 
 @app.route("/edit/<int:item_id>", methods=["GET", "POST"])
 def edit_item(item_id):
